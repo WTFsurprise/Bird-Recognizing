@@ -1,4 +1,4 @@
-# 🐦 鸟类识别平台 - Bird Discovery Platform
+#  鸟类识别平台 - Bird Discovery Platform
 
 一个完整的深度学习驱动的鸟类自动识别与分类系统，包含现代化的Web前端、高性能的FastAPI后端，以及Docker容器化部署支持。
 
@@ -7,36 +7,8 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009485)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ed)
 
-## ✨ 核心特性
 
-### 🤖 AI模型
-- **Swin Transformer B384** - 最先进的视觉Transformer架构
-- **313种鸟类识别** - 覆盖全球常见鸟类物种
-- **65.43% 验证准确率** - 在15,650张图片上训练
-- **热力图可视化** - 自注意力机制可视化，解释模型决策
-
-### 🎨 前端应用
-- **React 18** - 现代化的用户界面
-- **Tailwind CSS** - 响应式设计，美观易用
-- **拖拽上传** - 支持拖拽或点击上传鸟类图片
-- **实时识别** - 上传后立即进行识别
-- **历史记录** - 保存和管理所有识别记录
-- **热力图展示** - 显示模型关注的区域
-
-### ⚡ 后端API
-- **FastAPI** - 高性能的现代Web框架
-- **CORS支持** - 前后端分离部署
-- **RESTful设计** - 清晰的API接口
-- **健康检查** - 自动监控服务状态
-- **历史记录API** - 完整的识别历史管理
-
-### 🐳 Docker部署
-- **完整容器化** - 前后端独立容器
-- **一键启动** - docker-compose 编排
-- **Nginx反向代理** - 生产级配置
-- **自动健康检查** - 服务状态监控
-
-## 📋 项目结构
+## 项目结构
 
 ```
 bird-discovery-platform/
@@ -82,7 +54,7 @@ bird-discovery-platform/
 └── README.md                       # 本文件
 ```
 
-## 🚀 快速开始
+## 快速开始
 
 ### 方式1: Docker Compose (推荐)
 
@@ -145,7 +117,7 @@ npm run build
 npm run preview
 ```
 
-## 📚 API文档
+## API文档
 
 ### 基础识别端点
 
@@ -249,7 +221,7 @@ VITE_API_URL=http://localhost:8000
 | 输入尺寸 | 384×384 RGB |
 | 推理时间 | ~800ms (GPU), ~3s (CPU) |
 
-## 🛠️ 开发指南
+## 开发指南
 
 ### 添加新功能
 
@@ -274,14 +246,14 @@ VITE_API_URL=http://localhost:8000
 4. 配置SSL证书（HTTPS）
 5. 启动容器
 
-## 📈 性能优化
+## 性能优化
 
 - 后端使用单例模式缓存模型，避免重复加载
 - 前端使用虚拟列表优化历史记录显示
 - Nginx 启用 Gzip 压缩和静态资源缓存
 - Docker 多阶段构建优化镜像大小
 
-## 🔒 安全建议
+## 安全建议
 
 1. **CORS配置** - 生产环境指定具体域名
 2. **API认证** - 可考虑添加JWT令牌认证
@@ -289,53 +261,4 @@ VITE_API_URL=http://localhost:8000
 4. **输入验证** - 所有输入都经过验证
 5. **HTTPS** - 生产环境部署SSL证书
 
-## 📝 后端改进记录（v2.0）
 
-- ✅ 启用CORS跨域支持
-- ✅ `/api/predict/with_visualization` 返回实际的热力图Base64
-- ✅ 添加历史记录管理API (`/api/history`)
-- ✅ 改进错误处理和日志记录
-- ✅ 支持环境变量配置
-- ✅ 添加服务健康检查
-
-## 📝 前端开发记录
-
-- ✅ React 18 + Vite 现代化架构
-- ✅ Tailwind CSS 响应式设计
-- ✅ 拖拽上传、实时预览
-- ✅ Top-3结果、热力图展示
-- ✅ 历史记录完整CRUD
-- ✅ 全局状态管理（Context API）
-- ✅ 错误提示、加载动画
-
-## 🐛 常见问题
-
-**Q: 如何修改模型权重文件？**
-A: 编辑 `model/config.py` 中的 `MODEL_WEIGHTS_PATH`
-
-**Q: 如何自定义识别的物种？**
-A: 替换 `class_mapping.json` 文件
-
-**Q: 热力图显示不正确？**
-A: 确保 perception_engine.py 中的 `_extract_attention_map` 正常运行
-
-**Q: Docker里访问不到模型权重？**
-A: 确保权重文件在 `model/` 目录下
-
-## 📄 许可证
-
-MIT License - 详见 LICENSE 文件
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📞 联系方式
-
-如有技术问题，请在项目中提交 Issue
-
----
-
-**最后更新：** 2026-04-09  
-**版本：** 2.0.0  
-**状态：** 生产就绪 ✅
