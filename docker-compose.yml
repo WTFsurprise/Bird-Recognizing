@@ -1,0 +1,67 @@
+services:
+  # 后端 - FastAPI 应用
+  backend:
+    build:
+      context: ./model
+      dockerfile: Dockerfile
+    container_name: bird-discovery-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - INFERENCE_DEVICE=auto
+      - CONFIDENCE_THRESHOLD=0.20
+      - CORS_ENABLED=true
+      - CORS_ORIGINS=http://localhost,http://localhost:3000,http://frontend,http://127.0.0.1
+      - LOG_LEVEL=INFO
+      - DEBUG=false
+    volumes:
+      # 模型和配置文件
+      - ./model:/app/model:ro
+    networks:
+      - bird-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # 前端 - React + Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bird-discovery-frontend
+    ports:
+      - "80:80"
+      # 可选：HTTPS
+      # - "443:443"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - bird-network
+    restart: unless-stopped
+    # 可选：挂载自定义 Nginx 配置
+    # volumes:
+    #   - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+
+networks:
+  bird-network:
+    driver: bridge
+
+# 使用说明：
+# 1. 启动所有服务：docker-compose up
+# 2. 后台运行：docker-compose up -d
+# 3. 停止服务：docker-compose down
+# 4. 查看日志：docker-compose logs -f
+# 5. 只启动后端：docker-compose up backend
+# 6. 只启动前端：docker-compose up frontend
+#
+# 访问应用：
+# - 前端：http://localhost
+# - 后端 Swagger：http://localhost:8000/docs
+# - 后端 ReDoc：http://localhost:8000/redoc
