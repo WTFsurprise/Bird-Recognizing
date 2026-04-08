@@ -188,7 +188,7 @@ GET  /api/info      # API信息
 
 详见 Swagger 文档：http://localhost:8000/docs
 
-## ⚙️ 配置说明
+## 配置说明
 
 ### 后端配置 (`model/config.py`)
 
@@ -210,7 +210,7 @@ GET  /api/info      # API信息
 VITE_API_URL=http://localhost:8000
 ```
 
-## 📊 模型性能
+## 模型性能
 
 | 指标 | 数值 |
 |------|------|
