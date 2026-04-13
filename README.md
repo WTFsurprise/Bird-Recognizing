@@ -1,4 +1,4 @@
-# 🐦 Bird Discovery Platform
+#  Bird Discovery Platform
 
 [中文](#中文文档) | [English](#english-documentation)
 
@@ -535,7 +535,7 @@ curl -I http://localhost:8000/api/health
 
 ### Support
 
-- 🐛 Report Issues: [GitHub Issues](https://github.com/Phoinikas2002/Bird-Recognizing/issues)
+-  Report Issues: [GitHub Issues](https://github.com/Phoinikas2002/Bird-Recognizing/issues)
 
 ---
 
