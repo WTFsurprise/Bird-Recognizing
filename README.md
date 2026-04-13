@@ -1,10 +1,10 @@
 #  Bird Discovery Platform
 
-[中文](#中文文档) | [English](#english-documentation)
+[中文](#中文) | [English](#english)
 
 ---
 
-## 中文文档
+## 中文
 
 ### 项目简介
 
@@ -329,7 +329,7 @@ curl -I http://localhost:8000/api/health
 
 ---
 
-## English Documentation
+## English
 
 ### Project Overview
 
