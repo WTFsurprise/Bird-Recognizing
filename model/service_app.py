@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import io
 import json
 import logging
@@ -15,8 +14,6 @@ from datetime import datetime
 from pathlib import Path as FilePath
 from typing import Any, Dict, List, Optional, Tuple
 
-import cv2
-import numpy as np
 import torch
 from fastapi import FastAPI, File, HTTPException, Path as ApiPath, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,15 +44,6 @@ from config import (
 )
 from model import SwinBirdModel
 from perception_engine import BirdPerceptionEngine
-
-try:
-    from model_explain.explain_engine import ExplainEngine
-except Exception as exc:  # pragma: no cover - optional dependency
-    ExplainEngine = None
-    EXPLAIN_IMPORT_ERROR = str(exc)
-else:
-    EXPLAIN_IMPORT_ERROR = ""
-
 
 logging.basicConfig(level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO))
 logger = logging.getLogger(__name__)
@@ -310,12 +298,9 @@ class ModelManager:
 
         self.device = _resolve_device()
         self.class_names = _load_class_names()
-        self.species_to_index = {species: index for index, species in enumerate(self.class_names)}
         self.model_ready = False
-        self.heatmap_ready = False
         self.model = None
         self.engine = None
-        self.explain_engine = None
         self.history = HistoryStorage(max_records=100)
         self.agent = KnowledgeAgent()
         self.transform = transforms.Compose(
@@ -344,20 +329,11 @@ class ModelManager:
             self.engine = BirdPerceptionEngine(self.model, self.device, self.class_names)
             self.model_ready = True
 
-            if ExplainEngine is not None:
-                # Heatmap generation disabled for stability
-                # Enable in future with proper module dependencies
-                self.heatmap_ready = False
-            else:
-                self.heatmap_ready = False
-
             logger.info("Model loaded successfully")
         except Exception as exc:
             logger.exception("Model loading failed, switching to demo mode: %s", exc)
             self.model_ready = False
             self.engine = None
-            self.explain_engine = None
-            self.heatmap_ready = False
 
     def _fallback_recognition(self, image_name: str = "") -> Dict[str, Any]:
         candidates = self.class_names[:3] if len(self.class_names) >= 3 else (self.class_names or ["Unknown Species"])
@@ -377,11 +353,10 @@ class ModelManager:
             "top_1": top_3[0],
             "suggestion": "Model weights not loaded, returning framework-level sample results. Please configure MODEL_WEIGHTS_PATH to enable real inference.",
             "model_ready": False,
-            "heatmap_base64": None,
             "image_name": image_name,
         }
 
-    def predict(self, image: Image.Image, image_name: str = "", generate_heatmap: bool = False) -> Dict[str, Any]:
+    def predict(self, image: Image.Image, image_name: str = "") -> Dict[str, Any]:
         if not self.model_ready or self.engine is None:
             return self._fallback_recognition(image_name)
 
@@ -402,36 +377,12 @@ class ModelManager:
             "top_1": top_1,
             "suggestion": inference_result.get("suggestion"),
             "model_ready": True,
-            "heatmap_base64": None,
             "image_name": image_name,
         }
 
-    def _generate_heatmap_base64(self, image_tensor: torch.Tensor, species: str) -> Optional[str]:
-        if self.explain_engine is None:
-            return None
-
-        try:
-            target_class_idx = self.species_to_index.get(species, 0)
-            gradcam_heatmap = self.explain_engine.generate_heatmaps(image_tensor.to(self.device), target_class_idx)
-            original_image = image_tensor[0].cpu().numpy().transpose(1, 2, 0)
-            original_image = np.clip(
-                original_image * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406]),
-                0,
-                1,
-            )
-            overlay, _ = self.explain_engine.fuse_and_visualize(gradcam_heatmap, original_image, top_n=3, crop_size=(448, 448))
-            overlay_bgr = cv2.cvtColor((overlay * 255).astype(np.uint8), cv2.COLOR_RGB2BGR)
-            success, buffer = cv2.imencode(".png", overlay_bgr)
-            if not success:
-                return None
-            return f"data:image/png;base64,{base64.b64encode(buffer).decode('utf-8')}"
-        except Exception as exc:
-            logger.warning("热力图生成失败: %s", exc)
-            return None
-
-    def analyze_bytes(self, contents: bytes, image_name: str = "", generate_heatmap: bool = True) -> Tuple[Dict[str, Any], Image.Image]:
+    def analyze_bytes(self, contents: bytes, image_name: str = "") -> Tuple[Dict[str, Any], Image.Image]:
         image = Image.open(io.BytesIO(contents)).convert("RGB")
-        recognition = self.predict(image, image_name=image_name, generate_heatmap=generate_heatmap)
+        recognition = self.predict(image, image_name=image_name)
         top_species = recognition["top_1"]["species"]
         knowledge = self.agent.enrich(top_species, recognition)
         return {
@@ -483,7 +434,6 @@ async def root():
         "endpoints": [
             {"path": "/api/analyze", "method": "POST", "description": "上传图片，返回识别结果 + 千问知识增强"},
             {"path": "/api/predict", "method": "POST", "description": "仅返回模型识别结果"},
-            {"path": "/api/predict/with_visualization", "method": "POST", "description": "返回识别结果和热力图"},
             {"path": "/api/history", "method": "GET", "description": "获取历史记录"},
             {"path": "/api/health", "method": "GET", "description": "健康检查"},
             {"path": "/api/info", "method": "GET", "description": "API 和模型信息"},
@@ -499,7 +449,6 @@ async def health_check():
             "status": "healthy",
             "device": str(manager.device),
             "model_loaded": manager.model_ready,
-            "heatmap_ready": manager.heatmap_ready,
             "agent_ready": manager.agent.enabled,
             "num_classes": len(manager.class_names),
             "cors_enabled": CORS_ENABLED,
@@ -519,7 +468,6 @@ async def get_info():
                 "device": str(manager.device),
                 "model": "Swin Transformer (swin_base_patch4_window12_384)",
                 "model_ready": manager.model_ready,
-                "heatmap_ready": manager.heatmap_ready,
                 "agent": {
                     "provider": "qwen",
                     "model": QWEN_MODEL,
@@ -528,7 +476,6 @@ async def get_info():
                 },
                 "features": [
                     "图片上传识别",
-                    "热力图可视化",
                     "千问知识增强",
                     "历史记录管理",
                 ],
@@ -540,20 +487,15 @@ async def get_info():
 
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...)):
-    return await _analyze_upload(file, include_heatmap=True, include_agent=True)
+    return await _analyze_upload(file, include_agent=True)
 
 
 @app.post("/api/predict")
 async def predict(file: UploadFile = File(...)):
-    return await _analyze_upload(file, include_heatmap=False, include_agent=False)
+    return await _analyze_upload(file, include_agent=False)
 
 
-@app.post("/api/predict/with_visualization")
-async def predict_with_visualization(file: UploadFile = File(...)):
-    return await _analyze_upload(file, include_heatmap=True, include_agent=False)
-
-
-async def _analyze_upload(file: UploadFile, include_heatmap: bool, include_agent: bool):
+async def _analyze_upload(file: UploadFile, include_agent: bool):
     try:
         if file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(status_code=400, detail=f"不支持的文件格式。支持: JPEG, PNG, WebP。接收到: {file.content_type}")
@@ -566,12 +508,7 @@ async def _analyze_upload(file: UploadFile, include_heatmap: bool, include_agent
 
         manager = ModelManager()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
-        recognition = manager.predict(image, image_name=file.filename or "", generate_heatmap=include_heatmap)
-
-        if include_heatmap and recognition.get("heatmap_base64") is None and manager.model_ready:
-            # Heatmap generation disabled for stability
-            pass
-            # recognition["heatmap_base64"] = manager._generate_heatmap_base64(...)
+        recognition = manager.predict(image, image_name=file.filename or "")
 
         knowledge = manager.agent.enrich(recognition["top_1"]["species"], recognition) if include_agent else {}
         summary = knowledge.get("summary") or recognition.get("suggestion") or "鸟类识别已完成。"

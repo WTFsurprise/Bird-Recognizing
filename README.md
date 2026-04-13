@@ -50,8 +50,6 @@ bird-discovery-platform/
 │   ├── config.py                       # 统一配置管理
 │   ├── model.py                        # Swin模型定义
 │   ├── perception_engine.py            # 推理引擎
-│   ├── model_explain/
-│   │   └── explain_engine.py          # GradCAM热力图生成（已禁用）
 │   ├── Dockerfile                      # 后端镜像
 │   ├── requirements.txt                # Python依赖
 │   └── class_mapping.json              # 313种鸟类映射
@@ -221,8 +219,7 @@ file: <image_file>
         {"rank": 1, "species": "Common Sparrow", "confidence": 0.92},
         {"rank": 2, "species": "Tree Sparrow", "confidence": 0.06},
         {"rank": 3, "species": "House Sparrow", "confidence": 0.02}
-      ],
-      "heatmap_base64": null
+      ]
     },
     "knowledge": {
       "enabled": true,

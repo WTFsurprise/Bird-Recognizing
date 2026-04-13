@@ -20,18 +20,6 @@ export const birdService = {
     return response.data
   },
 
-  async predictWithVisualization(file) {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const response = await api.post('/api/predict/with_visualization', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    return response.data
-  },
-
   async getHistory(limit = 20) {
     const response = await api.get('/api/history', {
       params: { limit },

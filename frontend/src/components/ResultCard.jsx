@@ -102,7 +102,6 @@ export const ResultCard = ({ result }) => {
         <div className="result-meta-row">
           <span>{recognition.model_ready ? 'Model Ready' : 'Demo Mode'}</span>
           <span>{agentEnabled ? `Qwen Agent: ${knowledge.model || 'qwen'}` : 'Local Fallback Enabled'}</span>
-          <span>{recognition.heatmap_base64 ? 'Heatmap Ready' : 'No Heatmap'}</span>
         </div>
       </section>
 
@@ -139,18 +138,6 @@ export const ResultCard = ({ result }) => {
           ))}
         </div>
       </section>
-
-      {recognition.heatmap_base64 && (
-        <section className="glass-panel">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Heatmap</p>
-              <h3>Model Attention Region</h3>
-            </div>
-          </div>
-          <img src={recognition.heatmap_base64} alt="Recognition Heatmap" className="heatmap-image" />
-        </section>
-      )}
 
       <section className="glass-panel knowledge-panel">
         <div className="section-heading">
