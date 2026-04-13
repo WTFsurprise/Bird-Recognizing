@@ -6,8 +6,8 @@ import timm
 class SwinBirdModel(nn.Module):
     def __init__(self, num_classes):
         super(SwinBirdModel, self).__init__()
-        # 使用 Swin-Base 384 预训练模型
-        self.backbone = timm.create_model('swin_base_patch4_window12_384', pretrained=True, num_classes=0)
+        # 只构建网络结构，权重由本地 checkpoint 加载，避免运行时拉取外网预训练参数
+        self.backbone = timm.create_model('swin_base_patch4_window12_384', pretrained=False, num_classes=0)
         self.embedding = nn.Sequential(
             nn.Linear(1024, 512),
             nn.BatchNorm1d(512),

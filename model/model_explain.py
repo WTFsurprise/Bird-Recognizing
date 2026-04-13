@@ -101,11 +101,12 @@ if __name__ == "__main__":
 
         # 获取预测结果
         result = perception_engine.infer(image_tensor)
-        pred_species = result['top_3'][0]['species']
-        pred_conf = result['top_3'][0]['confidence']
-        target_class = species_to_classid[pred_species]
         print(f"=== 模型预测结果 ===")
-        print(f"鸟类种类: {pred_species} | 置信度: {pred_conf:.2%} | 类别ID: {target_class}")
+        for i, pred in enumerate(result['top_3'], 1):
+            pred_species = pred['species']
+            pred_conf = pred['confidence']
+            target_class = species_to_classid[pred_species]
+            print(f"Top {i}: 鸟类种类: {pred_species} | 置信度: {pred_conf:.2%} | 类别ID: {target_class}")
 
         # 生成Grad-CAM++热力图
         print("\n=== 生成Grad-CAM++热力图 ===")

@@ -2,8 +2,8 @@ services:
   # 后端 - FastAPI 应用
   backend:
     build:
-      context: ./model
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: model/Dockerfile
     container_name: bird-discovery-backend
     ports:
       - "8000:8000"
@@ -12,6 +12,9 @@ services:
       - SERVER_PORT=8000
       - INFERENCE_DEVICE=auto
       - CONFIDENCE_THRESHOLD=0.20
+      - QWEN_API_KEY=${QWEN_API_KEY:-}
+      - QWEN_BASE_URL=${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - QWEN_MODEL=${QWEN_MODEL:-qwen-plus}
       - CORS_ENABLED=true
       - CORS_ORIGINS=http://localhost,http://localhost:3000,http://frontend,http://127.0.0.1
       - LOG_LEVEL=INFO
@@ -22,7 +25,7 @@ services:
     networks:
       - bird-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 5

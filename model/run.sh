@@ -3,6 +3,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_REQUIREMENTS="${SCRIPT_DIR}/../requirements.txt"
+
 echo "=========================================="
 echo "🚀 鸟类识别API启动脚本"
 echo "=========================================="
@@ -40,7 +43,11 @@ source venv/bin/activate
 echo "📦 检查依赖..."
 if ! pip show fastapi > /dev/null; then
     echo "📦 安装依赖..."
-    pip install -q -r requirements.txt
+    if [ ! -f "${ROOT_REQUIREMENTS}" ]; then
+        echo "❌ 错误: 未找到根目录 requirements.txt"
+        exit 1
+    fi
+    pip install -q -r "${ROOT_REQUIREMENTS}"
 fi
 
 echo "✅ 依赖检查完成"

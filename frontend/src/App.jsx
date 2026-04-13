@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { AppProvider, useApp } from '@/context/AppContext'
 import UploadZone from '@/components/UploadZone'
 import ResultCard from '@/components/ResultCard'
@@ -7,156 +7,208 @@ import { LoadingSpinner, ErrorAlert } from '@/components/Alerts'
 import { birdService } from '@/api/birdService'
 
 const AppContent = () => {
-  const { loading, error, setApiError, clearError, setApiHealth } = useApp()
-  const [result, setResult] = useState(null)
-  const [activeTab, setActiveTab] = useState('upload') // upload, result, history
+  const { loading, setLoading, error, setApiError, clearError, setApiHealth, setApiInfo, apiHealth } = useApp()
+  const [analysis, setAnalysis] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [fileName, setFileName] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [historyRefreshSignal, setHistoryRefreshSignal] = useState(0)
+  const previewRef = useRef('')
 
   useEffect(() => {
-    checkApiHealth()
+    initializeDashboard()
+    return () => {
+      if (previewRef.current) {
+        URL.revokeObjectURL(previewRef.current)
+      }
+    }
   }, [])
 
-  const checkApiHealth = async () => {
+  const initializeDashboard = async () => {
     try {
-      const health = await birdService.healthCheck()
+      const [health, info] = await Promise.all([
+        birdService.healthCheck(),
+        birdService.getInfo(),
+      ])
       setApiHealth(health)
-    } catch (err) {
-      setApiError('无法连接到后端API，请确保服务器正在运行')
+      setApiInfo(info)
+    } catch (error) {
+      setApiError('Cannot connect to the backend API, please make sure the service is running.')
     }
   }
 
-  const handleUploadSuccess = (data) => {
-    setResult(data)
-    setActiveTab('result')
+  const analyzeFile = async (file) => {
+    setLoading(true)
+    try {
+      clearError()
+      const response = await birdService.analyze(file)
+      if (response.success) {
+        setAnalysis(response.data)
+        setHistoryRefreshSignal((current) => current + 1)
+      } else {
+        setApiError(response.error || 'Analysis failed')
+      }
+    } catch (error) {
+      setApiError(error.response?.data?.error || 'Network error, please try again later')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleRetry = () => {
-    setResult(null)
-    setActiveTab('upload')
+  const handleFileSelected = async (file, message) => {
+    if (message) {
+      setApiError(message)
+      return
+    }
+
+    if (!file) {
+      return
+    }
+
+    clearError()
+    setSelectedFile(file)
+    setFileName(file.name)
+
+    if (previewRef.current) {
+      URL.revokeObjectURL(previewRef.current)
+    }
+
+    const objectUrl = URL.createObjectURL(file)
+    previewRef.current = objectUrl
+    setPreviewUrl(objectUrl)
+    setAnalysis(null)
+    await analyzeFile(file)
   }
+
+  const handleReset = () => {
+    setAnalysis(null)
+    setSelectedFile(null)
+    setFileName('')
+    clearError()
+
+    if (previewRef.current) {
+      URL.revokeObjectURL(previewRef.current)
+      previewRef.current = ''
+    }
+
+    setPreviewUrl('')
+  }
+
+  const statusCards = [
+    {
+      label: 'Backend Status',
+      value: apiHealth?.status === 'healthy' ? 'Online' : 'Unknown',
+      tone: apiHealth?.status === 'healthy' ? 'positive' : 'neutral',
+    },
+    {
+      label: 'Bird CV Model',
+      value: apiHealth?.model_loaded ? 'Ready' : 'Demo Mode',
+      tone: apiHealth?.model_loaded ? 'positive' : 'warning',
+    },
+    {
+      label: 'Qwen Agent',
+      value: apiHealth?.agent_ready ? 'Enabled' : 'Fallback',
+      tone: apiHealth?.agent_ready ? 'positive' : 'warning',
+    },
+  ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* 头部 */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">🐦 鸟类识别平台</h1>
-          <p className="text-blue-100 text-lg">使用深度学习自动识别你上传的鸟类图片</p>
-        </div>
+    <div className="app-shell">
+      <div className="app-backdrop app-backdrop-one" />
+      <div className="app-backdrop app-backdrop-two" />
+      <div className="app-backdrop app-backdrop-three" />
 
-        {/* 错误提示 */}
-        {error && (
-          <ErrorAlert
-            error={error}
-            onDismiss={clearError}
-          />
-        )}
+      <main className="app-container">
+        <header className="hero-panel glass-panel">
+          <div className="hero-copy">
+            <p className="eyebrow">Bird Discovery Platform</p>
+            <h1>Bird Identification & Knowledge Studio</h1>
+            <p className="hero-description">
+              Upload a bird photo and the backend will identify it first, then use Qwen to generate species knowledge, observation tips, and conservation notes.
+            </p>
 
-        {/* 主容器 */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* 左侧主内容区域 */}
-          <div className="lg:col-span-3">
-            <div className="space-y-6">
-              {/* 标签栏 */}
-              <div className="flex gap-2 bg-white/20 backdrop-blur-md rounded-lg p-1 w-fit">
-                <button
-                  onClick={() => setActiveTab('upload')}
-                  className={`px-6 py-2 rounded-md font-medium transition-all ${
-                    activeTab === 'upload'
-                      ? 'bg-white text-blue-600 shadow-lg'
-                      : 'text-white hover:bg-white/10'
-                  }`}
-                >
-                  📤 上传
-                </button>
-                {result && (
-                  <button
-                    onClick={() => setActiveTab('result')}
-                    className={`px-6 py-2 rounded-md font-medium transition-all ${
-                      activeTab === 'result'
-                        ? 'bg-white text-blue-600 shadow-lg'
-                        : 'text-white hover:bg-white/10'
-                    }`}
-                  >
-                    📊 结果
-                  </button>
-                )}
-                <button
-                  onClick={() => setActiveTab('history')}
-                  className={`px-6 py-2 rounded-md font-medium transition-all ${
-                    activeTab === 'history'
-                      ? 'bg-white text-blue-600 shadow-lg'
-                      : 'text-white hover:bg-white/10'
-                  }`}
-                >
-                  📜 历史
-                </button>
-              </div>
-
-              {/* 内容区域 */}
-              <div className="bg-white rounded-2xl shadow-2xl p-8">
-                {activeTab === 'upload' && (
-                  <UploadZone onUploadSuccess={handleUploadSuccess} />
-                )}
-
-                {activeTab === 'result' && (
-                  <div>
-                    <ResultCard result={result} />
-                    <button
-                      onClick={handleRetry}
-                      className="mt-6 btn-primary w-full text-center"
-                    >
-                      📤 上传新图片
-                    </button>
-                  </div>
-                )}
-
-                {activeTab === 'history' && <HistoryPanel />}
-              </div>
+            <div className="hero-actions">
+              <button className="primary-button" onClick={() => selectedFile && analyzeFile(selectedFile)} disabled={!selectedFile || loading}>
+                Reanalyze Current Image
+              </button>
+              <button className="ghost-button" onClick={handleReset} disabled={loading && !analysis}>
+                Clear Result
+              </button>
             </div>
           </div>
 
-          {/* 右侧信息面板 */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-6 text-white space-y-6 sticky top-8">
-              <div>
-                <h3 className="text-lg font-bold mb-3">📋 使用说明</h3>
-                <ul className="text-sm space-y-2 opacity-90">
-                  <li>✓ 支持 JPEG, PNG, WebP 格式</li>
-                  <li>✓ 最大文件 50 MB</li>
-                  <li>✓ 支持 313 种鸟类识别</li>
-                  <li>✓ 返回 Top-3 预测结果</li>
-                  <li>✓ 提供热力图可视化</li>
-                </ul>
+          <div className="hero-stats">
+            {statusCards.map((card) => (
+              <div key={card.label} className={`status-card ${card.tone}`}>
+                <span>{card.label}</span>
+                <strong>{card.value}</strong>
               </div>
+            ))}
+          </div>
+        </header>
 
-              <div className="border-t border-white/30 pt-6">
-                <h3 className="text-lg font-bold mb-3">🔗 API 信息</h3>
-                <div className="text-sm space-y-2 opacity-90">
-                  <div className="flex items-center gap-2">
-                    <span>服务器状态:</span>
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  </div>
-                  <p className="text-xs text-gray-200 break-all">
-                    {process.env.REACT_APP_API_URL ||
-                      import.meta.env.VITE_API_URL ||
-                      'http://localhost:8000'}
-                  </p>
+        {error && <ErrorAlert error={error} onDismiss={clearError} />}
+
+        <div className="dashboard-grid">
+          <section className="main-column">
+            <section className="glass-panel upload-panel">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Upload Image</p>
+                  <h3>Drag or Click to Select a Bird Photo</h3>
                 </div>
               </div>
 
-              <div className="border-t border-white/30 pt-6">
-                <h3 className="text-sm font-bold mb-2">💡 关于模型</h3>
-                <p className="text-xs opacity-90">
-                  采用 Swin Transformer 架构，在 15,650 张鸟类图片上训练，验证集准确率 65.43%。
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+              <UploadZone
+                previewUrl={previewUrl}
+                fileName={fileName}
+                onFileSelected={handleFileSelected}
+                disabled={loading}
+                statusText={loading ? 'Image submitted, identifying bird now...' : ''}
+              />
 
-      {/* 加载动画 */}
-      {loading && <LoadingSpinner message="正在识别中..." />}
+              {loading && (
+                <div className="upload-progress-banner" role="status" aria-live="polite">
+                  <div className="upload-progress-dot" />
+                  <div>
+                    <strong>Identifying Image</strong>
+                    <p>Model inference and knowledge generation in progress, please wait.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="upload-footer">
+                <div>
+                  <span className="upload-footer-label">Current File</span>
+                  <strong>{fileName || 'Not selected'}</strong>
+                </div>
+                <div className="upload-footer-actions">
+                  <button className="ghost-button" onClick={handleReset} disabled={loading}>
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="result-area">
+              {analysis ? (
+                <ResultCard result={analysis} />
+              ) : (
+                <section className="glass-panel empty-analysis-panel">
+                  <div className="empty-state">
+                    <p>No Analysis Yet</p>
+                    <span>After uploading an image, model results and knowledge cards will appear here.</span>
+                  </div>
+                </section>
+              )}
+            </section>
+
+            <HistoryPanel refreshSignal={historyRefreshSignal} />
+          </section>
+        </div>
+      </main>
+
+      {loading && <LoadingSpinner message="Identifying image and preparing knowledge cards..." />}
     </div>
   )
 }

@@ -1,6 +1,9 @@
 @echo off
 REM 鸟类识别API启动脚本 (Windows)
 
+set "SCRIPT_DIR=%~dp0"
+set "ROOT_REQUIREMENTS=%SCRIPT_DIR%..\requirements.txt"
+
 chcp 65001 >nul
 cls
 
@@ -62,7 +65,12 @@ echo 📦 检查和安装依赖...
 pip list | find /i "fastapi" >nul
 if errorlevel 1 (
     echo 安装依赖中，请稍候...
-    pip install -q -r requirements.txt
+    if not exist "%ROOT_REQUIREMENTS%" (
+        echo ❌ 未找到根目录 requirements.txt
+        pause
+        exit /b 1
+    )
+    pip install -q -r "%ROOT_REQUIREMENTS%"
 )
 
 echo.
