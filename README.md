@@ -325,7 +325,7 @@ curl -I http://localhost:8000/api/health
 
 ### 联系支持
 
-- 🐛 报告Bug: [GitHub Issues](https://github.com/Phoinikas2002/Bird-Recognizing/issues)
+- 报告Bug: [GitHub Issues](https://github.com/Phoinikas2002/Bird-Recognizing/issues)
 
 ---
 
